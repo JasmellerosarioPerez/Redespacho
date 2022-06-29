@@ -1,0 +1,49 @@
+﻿@page "/solicitudredespacho"
+@inject RequerirRedespachoController requeriredespachoController
+@inject NavigationManager navigationmanager
+@using Sredespacho.Shared;
+@using MatBlazor
+
+<div><center><b><h1>Solicitudes Re-Despacho</h1></b></center></div><br/> <br/>
+
+<div>
+ <MatButton Dense="true" Icon="attach_file" @onclick="Solicitud" style="float: right;">Solicitar Re-Despacho</MatButton> 
+</div>
+
+<MatTable Items="@redespachos" Class="mat-elevation-z5" AllowSelection="true"  FilterByColumnName="Fecha" >
+    <MatTableHeader>
+         <th width="12%" align="center">Fecha</th>
+         <th width="10%" align="center">Ingeniero</th>
+         <th align="center">Descripcion</th>
+    </MatTableHeader>
+    <MatTableRow>
+                <td align="justify">@context.Fecha</td>
+                <td align="justify">@context.Ingeniero</td>
+                <td align="justify">@context.Descripcion</td>    
+                          
+    </MatTableRow>
+</MatTable>
+
+
+
+ 
+
+@code {
+
+
+    public List<RequerirRedespacho> redespachos = new List<RequerirRedespacho>();
+  
+
+    protected override async Task OnInitializedAsync()
+    {
+        redespachos = await requeriredespachoController.GetDespachoList();
+             }
+
+    protected void Solicitud()
+    {
+        navigationmanager.NavigateTo("/solicitud");
+    }
+
+    
+
+}

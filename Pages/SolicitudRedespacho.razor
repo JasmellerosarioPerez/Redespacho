@@ -1,0 +1,248 @@
+﻿@page "/solicitud"
+
+@inject GenPlantillaReDespachoController genplantillaredespachoController
+@inject GenPlantillaReDespachoDbContext genplantillaredespachoDbContext
+@inject NavigationManager navigationmanager
+@inject stp_localizarIngenierodTurnoController stp_localizaringenierodturnoController
+@inject TurnosController turnosController
+@inject IJSRuntime _JsRuntime
+@inject RequerirRedespachoController requerirRedespachoController
+@inject CorreosController correosController
+@inject IMatDialogService MatDialogService
+
+@using Sredespacho.Data`
+@using Sredespacho.Data.DTO
+@using System.IO 
+@using System.Text
+
+
+@*Encargado de turno *@
+
+<MatDivider></MatDivider>
+<center><h3 class="mat-h2">Solicitud de Re-Despacho</h3></center>   
+<BSContainer Container="Container.ExtraExtraLarge">
+@foreach (var ing in turno){
+  <center><MatHeadline6>Ing. Encargado de Turno: <b>@ing.Ingeniero</b> &nbsp;&nbsp; &nbsp; @hora</MatHeadline6></center> 
+    }
+</BSContainer>
+<MatDivider></MatDivider>
+
+
+
+ <br />
+ <br/> <br/>
+
+
+<div class="container">
+
+<EditForm Model="redespachos" OnInvalidSubmit="@(()=>GuardarDatos())"> 
+<div class="col-md-9">
+           
+              <InputSelect Value="requerir_Id" ValueChanged="@( (string b ) => OnCHange(b))"
+                    ValueExpression="@( () => requerir_Id)" class="form-control col-md-12 ">
+                            <option value="" style="width:20%">--Seleccione la plantilla--</option>
+
+                            @if (plantobj.Count != 0)
+                            {
+                                @foreach (var a in plantobj)
+                                {
+                                    <option value="@a.TipoRedespacho_id">@a.Tipo</option>
+                                }
+                            }
+                            else
+                            {
+                                <option value="0">Cargando...</option>
+                            }
+              </InputSelect>
+                    </div>
+
+                    <br />
+
+
+ <MatPaper Elevation="4"><MatTextField @bind-Value="plantillas.Plantilla" rows="10" cols="118" Dense="true" TextArea="true" FullWidth="true"></MatTextField></MatPaper>
+       
+                 
+</EditForm>
+
+</div><br /><br />
+
+
+
+
+
+<BSModal DataId="modal3" IsCentered="true" IsStaticBackdrop="true" IsScrollable="true">
+    <Header>DESTINATARIOS</Header>
+    <Content>  
+       <BSContainer>             
+           <BSTable IsResponsive="true">                                    
+           <thead align="center">
+               <tr>
+                <th style="font-weight: bolder">NOMBRES</th>
+                <th style="font-weight: bolder">CORREOS</th>   
+                 <th></th> 
+                   </tr>
+                   </thead>
+                   <tbody>
+                       @foreach(var Correos in correobj)
+                    {
+                        <tr>
+                            <td align="center" style="background:#FFFFFF">@Correos.Nombre</td>
+                            <td align="center" style="background:#FFFFFF">@Correos.email</td>
+                            @if ( Correos.CC )
+                            {
+                              
+                                <td align="center" style="background:#FFFFFF">
+                                  <div Class="@BS.Form_Check @BS.Form_Switch">
+                                    <BSInputCheckbox CheckedValue="@("off")" @bind-Value="ValueTwo"/>
+                                   </div>
+                                 </td>
+                            }
+                            else 
+                            {
+                              
+                               <td align="center" style="background:#FFFFFF"> 
+                                   <div Class="@BS.Form_Check @BS.Form_Switch">
+                                    <BSInputCheckbox CheckedValue="@("on")" IsDisabled="true"/>
+                                   </div>
+                                </td>
+                            }
+                        </tr>                     
+                    }
+                </tbody>
+           </BSTable>
+           
+       </BSContainer>
+    </Content>
+    <Footer Context="modal">
+        <div style="text-align: center">
+        <BSButtonGroup>
+        <BSButton Color="BSColor.Success" Target="modal5" IsOutlined="true">Agregar Correo</BSButton>
+        <BSButton Color="BSColor.Success" @onclick="EnviarCorreo" IsOutlined="true">Enviar Correo</BSButton>
+        <BSButton MarginStart="Margins.Auto" Color="BSColor.Danger" @onclick="modal.HideAsync" IsOutlined="true">Close</BSButton>    
+        </BSButtonGroup>
+        </div>
+    </Footer>
+</BSModal>
+<div style="text-align: center">
+ <BSButtonGroup>
+<BSButton Color="BSColor.Success" @onclick="GuardarDatos" IsOutlined="true">Guardar</BSButton>
+<BSButton Color="BSColor.Success" Target="modal3" IsOutlined="true">Destinatarios y CCO's'</BSButton>
+</BSButtonGroup>
+</div>
+
+@*PENDIENTE boton de guardar !!!*@
+
+<BSModal IsCentered="true" DataId="modal5">
+    <Header><center><b>AGREGAR NUEVO CORREO</b></center></Header>
+    <Content>
+    <div class="mb-3">
+        <BSInput InputType="InputType.Text" placeholder="Insertar nombre" Value="@("")"/>
+        </div>
+        <div class="mb-3">
+        <BSInput InputType="InputType.Email" placeholder="Insertar nuevo email" Value="@("")"/>
+        </div>
+    </Content>
+    <Footer Context="modal">
+        <BSButton MarginStart="Margins.Auto" Color="BSColor.Secondary" @onclick="modal.HideAsync">Close</BSButton>
+        <BSButton Color="BSColor.Primary">Guardar</BSButton>
+    </Footer>
+</BSModal>
+
+          
+
+
+
+@code {
+
+
+    private List<Correos> correobj = new List<Correos>();
+
+    private Correos correobj1 = new Correos();
+    private List<Plantillas> plantobj = new List<Plantillas>();
+    private List<stp_localizarIngenierodTurno> turno = new List<stp_localizarIngenierodTurno>();
+    private RequerirRedespacho redespachos = new RequerirRedespacho();
+    private Plantillas plantillas = new Plantillas();
+    string requerir_Id;
+    string hora;
+    EnvioEmail objLogic = new EnvioEmail();
+    private string ValueTwo { get; set; } = "off";
+
+
+
+
+
+
+
+    private void OnCHange(string value)
+    {
+        requerir_Id = Convert.ToString(value);
+        int x = Convert.ToInt32(value)-1;
+        plantillas.Plantilla = plantobj[x].Plantilla;
+
+    }
+
+
+    protected async Task GuardarDatos()
+    {
+
+        redespachos.Descripcion = plantillas.Plantilla;
+        redespachos.Ingeniero = turno[0].Ingeniero;
+        await requerirRedespachoController.SalvarRedespacho(redespachos);
+        await MatDialogService.AlertAsync("¡La plantilla ha sido guardad existosamente!.");
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        plantobj = await genplantillaredespachoController.GetPlantillasData();
+        turno = stp_localizaringenierodturnoController.GetTurno();
+        hora = DateTime.Now.ToLongTimeString();
+        correobj = await correosController.GetCorreos("todos");
+
+
+
+    }
+
+    private async void EnviarCorreo()
+    {
+
+        try
+        {
+            string body = $@"
+             <h3>BUENAS A LAS {hora} EL CCE SOLICITA REPROGRAMACION POR:</h3>
+             </br>
+             <p>{redespachos.Descripcion}</p>
+             </br>
+             ";
+
+            foreach (var item in correobj)
+            {
+                if(item.CC == true)
+                {
+
+                    objLogic.sendMail(item.email,"SOLICITUD DE REPROGRAMACION", body); 
+                }
+
+            }
+
+            navigationmanager.NavigateTo("/solicitudredespacho");    
+
+        } 
+
+
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        } 
+
+
+    }
+
+    //protected async Task GuardarCorreo(Correos correos)
+    //{
+    //    correobj1 =  await correosController.GuardarCorreos(correobj1.email); 
+       
+    //}
+
+}
+
